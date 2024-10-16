@@ -8,15 +8,11 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-
-      - name: use node.js
-        uses: actions/setup-node@v2
+      - uses: actions/checkout@v3
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: 20
-          cache: npm
+          bun-version: latest
 
       - run: |
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_ACCESS_TOKEN }}" > .npmrc
-          npm pack
-          npm publish
+          bun publish
