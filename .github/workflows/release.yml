@@ -6,10 +6,11 @@ on:
 
 jobs:
   publish:
+    name: publish
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        uses: oven-sh/setup-bun@v1
+      - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
 
