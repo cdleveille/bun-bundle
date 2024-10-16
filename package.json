@@ -1,0 +1,27 @@
+{
+  "name": "bunpack",
+  "version": "1.0.0",
+  "description": "A lightweight module bundler wrapping Bun.build",
+  "author": "Chris Leveille <cdleveille@gmail.com>",
+  "repository": "https://github.com/cdleveille/bunpack.git",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "bun-copy-plugin": "^0.2.1",
+    "minify": "^11.4.1",
+    "rimraf": "^6.0.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/minify": "^9.1.4",
+    "eslint": "^9.12.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.9.0"
+  }
+}
