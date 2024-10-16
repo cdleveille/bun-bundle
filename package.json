@@ -1,9 +1,9 @@
 {
-  "name": "bunpack",
+  "name": "bun-pack",
   "version": "1.0.0",
   "description": "A lightweight module bundler wrapping Bun.build",
   "author": "Chris Leveille <cdleveille@gmail.com>",
-  "repository": "https://github.com/cdleveille/bunpack.git",
+  "repository": "https://github.com/cdleveille/bun-pack.git",
   "license": "MIT",
   "type": "module",
   "main": "./src/index.ts",
