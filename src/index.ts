@@ -3,9 +3,9 @@ import { minify as Minify } from "minify";
 import path from "path";
 import { rimrafSync } from "rimraf";
 
-import type { BuildConfig } from "bun";
+import type { BuildConfig, BuildOutput } from "bun";
 
-export const BunPack = {
+export const BunBundle = {
 	build: async ({
 		srcDir,
 		outDir,
@@ -15,7 +15,6 @@ export const BunPack = {
 		cssStringTemplate = "{css}",
 		copyFolders = [],
 		copyFiles = [],
-		target = "browser",
 		sourcemap,
 		minify,
 		naming,
@@ -23,7 +22,7 @@ export const BunPack = {
 		plugins = [],
 		isProd,
 		suppressLog
-	}: BunPackConfig) => {
+	}: BunBundleBuildConfig) => {
 		try {
 			const start = Date.now();
 
@@ -42,7 +41,7 @@ export const BunPack = {
 			const buildCommon = {
 				root: SRC_DIR,
 				outdir: OUT_DIR,
-				target,
+				target: "browser",
 				sourcemap: sourcemap ?? (IS_PROD ? "none" : "inline"),
 				minify: minify ?? IS_PROD
 			} as Partial<BuildConfig>;
@@ -103,24 +102,32 @@ export const BunPack = {
 
 			rimrafSync(path.join(OUT_DIR, "src"));
 
-			if (IS_PROD) {
+			if (minify ?? IS_PROD) {
 				// minify html and css files in production
 				const [minifiedHtml, minifiedCss] = await Promise.all([Minify(indexHtmlPath), Minify(cssFile.path)]);
 				await Promise.all([Bun.write(indexHtmlPath, minifiedHtml), Bun.write(cssFile.path, minifiedCss)]);
 			}
 
+			const buildTime = Date.now() - start;
+
 			if (!suppressLog)
-				console.log(
-					`Build completed in ${IS_PROD ? "production" : "development"} mode (${Date.now() - start}ms)`
-				);
-			return IS_PROD;
+				console.log(`Build completed in ${IS_PROD ? "production" : "development"} mode (${buildTime}ms)`);
+
+			const buildOutput: BunBundleBuildOutput = {
+				isSuccess: true,
+				isProd: IS_PROD,
+				results,
+				buildTime
+			};
+
+			return buildOutput;
 		} catch (error) {
 			throw new AggregateError(error instanceof Array ? error : [error]);
 		}
 	}
 };
 
-export type BunPackConfig = {
+export type BunBundleBuildConfig = {
 	srcDir: string;
 	outDir: string;
 	mainEntry: string;
@@ -129,7 +136,6 @@ export type BunPackConfig = {
 	cssStringTemplate?: string;
 	copyFolders?: string[];
 	copyFiles?: string[];
-	target?: BuildConfig["target"];
 	sourcemap?: BuildConfig["sourcemap"];
 	minify?: BuildConfig["minify"];
 	naming?: BuildConfig["naming"];
@@ -137,4 +143,11 @@ export type BunPackConfig = {
 	plugins?: BuildConfig["plugins"];
 	isProd?: boolean;
 	suppressLog?: boolean;
+};
+
+export type BunBundleBuildOutput = {
+	isSuccess: boolean;
+	isProd: boolean;
+	results: BuildOutput[];
+	buildTime: number;
 };
