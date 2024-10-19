@@ -137,7 +137,7 @@ export type BunBundleBuildConfig = {
 	copyFiles?: string[];
 	isProd?: boolean;
 	suppressLog?: boolean;
-} & BuildConfig;
+} & Partial<BuildConfig>;
 
 export type BunBundleBuildOutput = {
 	isSuccess: boolean;
