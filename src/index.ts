@@ -21,7 +21,8 @@ export const BunBundle = {
 		define,
 		plugins = [],
 		isProd,
-		suppressLog
+		suppressLog,
+		...rest
 	}: BunBundleBuildConfig) => {
 		try {
 			const start = Date.now();
@@ -32,25 +33,23 @@ export const BunBundle = {
 			const IS_PROD =
 				isProd ??
 				(BUN_ENV === "production" || Bun.env.BUN_ENV === "production" || Bun.env.NODE_ENV === "production");
-			const SRC_DIR = srcDir;
-			const OUT_DIR = outDir;
 
 			// clear output folder
-			rimrafSync(OUT_DIR);
+			rimrafSync(outDir);
 
 			const buildCommon = {
-				root: SRC_DIR,
-				outdir: OUT_DIR,
-				target: "browser",
+				root: srcDir,
+				outdir: outDir,
 				sourcemap: sourcemap ?? (IS_PROD ? "none" : "inline"),
 				minify: minify ?? IS_PROD
 			} as Partial<BuildConfig>;
 
 			const buildMain = Bun.build({
+				...rest,
 				...buildCommon,
-				entrypoints: [path.join(SRC_DIR, mainEntry)],
+				entrypoints: [path.join(srcDir, mainEntry)],
 				naming: naming ?? {
-					entry: `${SRC_DIR}/[dir]/[name]~[hash].[ext]`,
+					entry: `${srcDir}/[dir]/[name]~[hash].[ext]`,
 					asset: "[dir]/[name].[ext]"
 				},
 				define: define ?? {
@@ -58,9 +57,9 @@ export const BunBundle = {
 				},
 				plugins: [
 					...copyFolders.map(folder =>
-						copy(`${path.join(SRC_DIR, folder)}/`, `${path.join(OUT_DIR, folder)}/`)
+						copy(`${path.join(srcDir, folder)}/`, `${path.join(outDir, folder)}/`)
 					),
-					...copyFiles.map(file => copy(path.join(SRC_DIR, file), path.join(OUT_DIR, file))),
+					...copyFiles.map(file => copy(path.join(srcDir, file), path.join(outDir, file))),
 					...plugins
 				]
 			});
@@ -68,7 +67,7 @@ export const BunBundle = {
 			const buildSw = swEntry
 				? Bun.build({
 						...buildCommon,
-						entrypoints: [path.join(SRC_DIR, swEntry)]
+						entrypoints: [path.join(srcDir, swEntry)]
 					})
 				: null;
 
@@ -88,7 +87,7 @@ export const BunBundle = {
 			const cssFile = outputs.find(output => output.path.endsWith(".css"));
 			if (!cssFile) throw "No .css file found in build output";
 			const cssFileName = path.parse(cssFile.path).base;
-			const indexHtmlPath = path.join(OUT_DIR, "index.html");
+			const indexHtmlPath = path.join(outDir, "index.html");
 
 			// inject .js and .css filenames into index.html
 			const indexHtmlContents = (await Bun.file(indexHtmlPath).text())
@@ -97,10 +96,10 @@ export const BunBundle = {
 
 			await Promise.all([
 				Bun.write(indexHtmlPath, indexHtmlContents),
-				Bun.write(path.join(OUT_DIR, jsFileName), Bun.file(jsFile.path))
+				Bun.write(path.join(outDir, jsFileName), Bun.file(jsFile.path))
 			]);
 
-			rimrafSync(path.join(OUT_DIR, "src"));
+			rimrafSync(path.join(outDir, "src"));
 
 			if (minify ?? IS_PROD) {
 				// minify html and css files in production
@@ -136,14 +135,9 @@ export type BunBundleBuildConfig = {
 	cssStringTemplate?: string;
 	copyFolders?: string[];
 	copyFiles?: string[];
-	sourcemap?: BuildConfig["sourcemap"];
-	minify?: BuildConfig["minify"];
-	naming?: BuildConfig["naming"];
-	define?: BuildConfig["define"];
-	plugins?: BuildConfig["plugins"];
 	isProd?: boolean;
 	suppressLog?: boolean;
-};
+} & BuildConfig;
 
 export type BunBundleBuildOutput = {
 	isSuccess: boolean;

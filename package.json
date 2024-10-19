@@ -1,9 +1,19 @@
 {
   "name": "bun-bundle",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "A lightweight module bundler wrapping Bun.build",
   "author": "Chris Leveille <cdleveille@gmail.com>",
   "repository": "https://github.com/cdleveille/bun-bundle.git",
+  "keywords": [
+    "bun",
+    "bundle",
+    "bundler",
+    "build",
+    "esm",
+    "module",
+    "javascript",
+    "typescript"
+  ],
   "license": "MIT",
   "type": "module",
   "main": "./src/index.ts",

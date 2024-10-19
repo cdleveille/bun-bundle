@@ -2,7 +2,7 @@
 
 A lightweight module bundler wrapping [Bun.build](https://bun.sh/docs/bundler)
 
-To use, install the `bun-bundle` package, then import `BunBundle` and call `BunBundle.build` with the desired options.
+To use, install the `bun-bundle` package, then import `BunBundle` and call its `build` function with the desired config options.
 
 ```
 bun add -D bun-bundle
@@ -44,8 +44,8 @@ const { isSuccess, isProd, results, buildTime } = buildOutput;
 ## Assumptions
 
 -   The build process will be run on the [bun](https://bun.sh) runtime.
--   The `srcDir` contains a `mainEntry` file (.js, .jsx, .ts, .tsx) that is the main client-side entrypoint.
--   The `mainEntry` file imports other files that are part of the build process, including a CSS file.
+-   The `srcDir` contains a single `mainEntry` file (.js, .jsx, .ts, .tsx) that is the main client-side entrypoint.
+-   The `mainEntry` file imports other files that are part of the build process, including a single CSS file.
 -   The `srcDir` contains an `index.html` file with a `<script>` tag with a `src` attribute that will be replaced at build-time by the name of the JS build output file via the `jsStringTemplate` option, as well as a `<link>` tag with an `href` attribute that will be replaced at build-time by the name of the CSS build output file via the `cssStringTemplate` option. For example:
 
 ```html
@@ -101,7 +101,7 @@ const { isSuccess, isProd, results, buildTime } = buildOutput;
 
 ```typescript
 {
-	entry: `${SRC_DIR}/[dir]/[name]~[hash].[ext]`,
+	entry: `${srcDir}/[dir]/[name]~[hash].[ext]`,
 	asset: "[dir]/[name].[ext]"
 }
 ```
@@ -112,7 +112,7 @@ const { isSuccess, isProd, results, buildTime } = buildOutput;
 
 ```typescript
 {
-	"Bun.env.IS_PROD": `"${IS_PROD}"`
+	"Bun.env.IS_PROD": `"${isProd}"`
 }
 ```
 
@@ -122,11 +122,15 @@ const { isSuccess, isProd, results, buildTime } = buildOutput;
 
 ### `isProd`
 
-(optional) A boolean used to explicitly set the build mode (production or development). If unspecified, the build process will look for a `BUN_ENV=production` or `NODE_ENV=production` command line argument or environment variable to determine the build mode.
+(optional) A boolean used to explicitly set the build mode (production or development). If unspecified, the build process will use production mode if it detects a `BUN_ENV=production` or `NODE_ENV=production` command line argument or environment variable. Otherwise, it will use development mode.
 
 ### `suppressLog`
 
 (optional) A boolean used to suppress the log output of the build process. If unspecified, defaults to `false`.
+
+## Additional Build Config Options
+
+The `BunBundle.build` function accepts any of the [native Bun.build config options](https://bun.sh/docs/bundler#api). The native options explicitly listed above are given opinionated default values. Any native option not listed above will simply be passed through to the `Bun.build` function with its normal default value.
 
 ## Build Output Fields
 
@@ -144,4 +148,4 @@ An object containing the Bun.build [outputs](https://bun.sh/docs/bundler#outputs
 
 ### `buildTime`
 
-A number indicating the amount of time in milliseconds the build process took to run.
+A number indicating the amount of time in milliseconds the build process took to complete.
