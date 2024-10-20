@@ -48,7 +48,7 @@ export const BunBundle = {
 				...buildCommon,
 				entrypoints: [path.join(srcDir, mainEntry)],
 				naming: naming ?? {
-					entry: "[name]~[hash].[ext]",
+					entry: `${IS_PROD ? `${srcDir}/[dir]/` : ""}[name]~[hash].[ext]`,
 					asset: "[dir]/[name].[ext]"
 				},
 				plugins: [
@@ -87,13 +87,15 @@ export const BunBundle = {
 
 			// inject .js and .css filenames into index.html
 			const indexHtmlContents = (await Bun.file(indexHtmlPath).text())
-				.replace(jsStringTemplate, jsFileName)
-				.replace(cssStringTemplate, cssFileName);
+				.replace(jsStringTemplate, `./${jsFileName}`)
+				.replace(cssStringTemplate, `./${cssFileName}`);
 
 			await Promise.all([
 				Bun.write(indexHtmlPath, indexHtmlContents),
 				Bun.write(path.join(outDir, jsFileName), Bun.file(jsFile.path))
 			]);
+
+			if (IS_PROD) rimrafSync(path.join(outDir, "src"));
 
 			if (minify ?? IS_PROD) {
 				// minify html and css files in production

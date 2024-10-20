@@ -101,7 +101,7 @@ const { isSuccess, isProd, results, buildTime } = buildOutput;
 
 ```typescript
 {
-	entry: "[name]~[hash].[ext]",
+	entry: `${isProd ? `${srcDir}/[dir]/` : ""}[name]~[hash].[ext]`,
 	asset: "[dir]/[name].[ext]"
 }
 ```
