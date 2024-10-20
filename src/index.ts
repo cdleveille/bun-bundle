@@ -87,8 +87,8 @@ export const BunBundle = {
 
 			// inject .js and .css filenames into index.html
 			const indexHtmlContents = (await Bun.file(indexHtmlPath).text())
-				.replace(jsStringTemplate, `./${jsFileName}`)
-				.replace(cssStringTemplate, `./${cssFileName}`);
+				.replace(jsStringTemplate, jsFileName)
+				.replace(cssStringTemplate, cssFileName);
 
 			await Promise.all([
 				Bun.write(indexHtmlPath, indexHtmlContents),
