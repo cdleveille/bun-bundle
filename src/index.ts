@@ -18,7 +18,6 @@ export const BunBundle = {
 		sourcemap,
 		minify,
 		naming,
-		define,
 		plugins = [],
 		isProd,
 		suppressLog,
@@ -49,11 +48,8 @@ export const BunBundle = {
 				...buildCommon,
 				entrypoints: [path.join(srcDir, mainEntry)],
 				naming: naming ?? {
-					entry: `${srcDir}/[dir]/[name]~[hash].[ext]`,
+					entry: "[name]~[hash].[ext]",
 					asset: "[dir]/[name].[ext]"
-				},
-				define: define ?? {
-					"Bun.env.IS_PROD": `"${IS_PROD}"`
 				},
 				plugins: [
 					...copyFolders.map(folder =>
@@ -91,15 +87,13 @@ export const BunBundle = {
 
 			// inject .js and .css filenames into index.html
 			const indexHtmlContents = (await Bun.file(indexHtmlPath).text())
-				.replace(jsStringTemplate, jsFileName)
-				.replace(cssStringTemplate, cssFileName);
+				.replace(jsStringTemplate, `./${jsFileName}`)
+				.replace(cssStringTemplate, `./${cssFileName}`);
 
 			await Promise.all([
 				Bun.write(indexHtmlPath, indexHtmlContents),
 				Bun.write(path.join(outDir, jsFileName), Bun.file(jsFile.path))
 			]);
-
-			rimrafSync(path.join(outDir, "src"));
 
 			if (minify ?? IS_PROD) {
 				// minify html and css files in production
@@ -113,7 +107,6 @@ export const BunBundle = {
 				console.log(`Build completed in ${IS_PROD ? "production" : "development"} mode (${buildTime}ms)`);
 
 			const buildOutput: BunBundleBuildOutput = {
-				isSuccess: true,
 				isProd: IS_PROD,
 				results,
 				buildTime
@@ -140,7 +133,6 @@ export type BunBundleBuildConfig = {
 } & Partial<BuildConfig>;
 
 export type BunBundleBuildOutput = {
-	isSuccess: boolean;
 	isProd: boolean;
 	results: BuildOutput[];
 	buildTime: number;

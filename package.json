@@ -1,6 +1,6 @@
 {
   "name": "bun-bundle",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "A lightweight module bundler wrapping Bun.build",
   "author": "Chris Leveille <cdleveille@gmail.com>",
   "repository": "https://github.com/cdleveille/bun-bundle.git",

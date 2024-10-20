@@ -101,18 +101,8 @@ const { isSuccess, isProd, results, buildTime } = buildOutput;
 
 ```typescript
 {
-	entry: `${srcDir}/[dir]/[name]~[hash].[ext]`,
+	entry: "[name]~[hash].[ext]",
 	asset: "[dir]/[name].[ext]"
-}
-```
-
-### `define`
-
-(optional) The Bun.build [define](https://bun.sh/docs/bundler#define) option. If unspecified, defaults to:
-
-```typescript
-{
-	"Bun.env.IS_PROD": `"${isProd}"`
 }
 ```
 
@@ -133,10 +123,6 @@ const { isSuccess, isProd, results, buildTime } = buildOutput;
 The `BunBundle.build` function accepts any of the [native Bun.build config options](https://bun.sh/docs/bundler#api). The native options explicitly listed above are given opinionated default values. Any native option not listed above will simply be passed through to the `Bun.build` function with its normal default value.
 
 ## Build Output Fields
-
-### `isSuccess`
-
-A boolean indicating whether the build process was successful. If there is an error, the build process will throw and nothing will be returned.
 
 ### `isProd`
 
