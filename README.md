@@ -2,6 +2,13 @@
 
 A lightweight module bundler wrapping [Bun.build](https://bun.sh/docs/bundler)
 
+Designed to bundle client-side code for the browser. Capable of:
+
+-   Building multiple entrypoints (including a service worker)
+-   Copying folders and files from the source directory to the output directory
+-   Dynamically injecting `<script>` and `<link>` tags into an `index.html` file in the output folder for each of the .js and .css files in the build output
+-   All the other native features of [Bun.build](https://bun.sh/docs/bundler)
+
 To use, install the `bun-bundle` package, then import `BunBundle` and call its `build` function with the desired config options.
 
 ```
@@ -13,120 +20,84 @@ bun add -D bun-bundle
 ```typescript
 import { BunBundle, BunBundleBuildConfig, BunBundleBuildOutput } from "bun-bundle";
 
+const IS_PROD = Bun.env.BUN_ENV === "true";
+
 const buildConfig: BunBundleBuildConfig = {
-	srcDir: "./src/client",
-	outDir: "./public",
-	mainEntry: "main.tsx",
-	swEntry: "sw.ts",
-	jsStringTemplate: "{js}",
-	cssStringTemplate: "{css}",
+	root: "./src/client",
+	outdir: "./public",
+	entrypoints: ["main.tsx"],
+	swEntrypoint: "sw.ts",
+	jsStringTemplate: "<!-- {js} -->",
+	cssStringTemplate: "<!-- {css} -->",
 	copyFolders: ["assets"],
 	copyFiles: ["browserconfig.xml", "favicon.ico", "index.html", "manifest.json"],
-	sourcemap: "inline",
-	minify: true,
+	define: { "Bun.env.IS_PROD": `"${IS_PROD}"` },
+	sourcemap: IS_PROD ? "none" : "linked",
 	naming: {
-		entry: `"./src/client/[dir]/[name]~[hash].[ext]`,
-		asset: "[dir]/[name].[ext]"
+		entry: "[dir]/[name]~[hash].[ext]",
+		asset: "[dir]/[name]~[hash].[ext]"
 	},
-	define: {
-		"Bun.env.IS_PROD": `"true"`
-	},
-	plugins: [],
-	isProd: true,
-	suppressLog: false
+	minify: IS_PROD,
+	suppressLog: true
 };
 
-const buildOutput: BunBundleBuildOutput = await BunBundle.build(buildConfig);
+const { results, buildTime }: BunBundleBuildOutput = await BunBundle.build(buildConfig);
 
-const { isSuccess, isProd, results, buildTime } = buildOutput;
-```
-
-## Assumptions
-
--   The build process will be run on the [bun](https://bun.sh) runtime.
--   The `srcDir` contains a single `mainEntry` file (.js, .jsx, .ts, .tsx) that is the main client-side entrypoint.
--   The `mainEntry` file imports other files that are part of the build process, including a single CSS file.
--   The `srcDir` contains an `index.html` file with a `<script>` tag with a `src` attribute that will be replaced at build-time by the name of the JS build output file via the `jsStringTemplate` option, as well as a `<link>` tag with an `href` attribute that will be replaced at build-time by the name of the CSS build output file via the `cssStringTemplate` option. For example:
-
-```html
-<script type="text/javascript" src="{js}" defer></script>
-<link rel="stylesheet" href="{css}" />
+console.log(`Build completed in ${IS_PROD ? "production" : "development"} mode in ${output.buildTime}ms`);
+console.log("Build results:\n", results);
 ```
 
 ## Build Config Options
 
-### `srcDir`
+### `root`
 
 (required) The path of the source directory to build from, relative to the project root.
 
-### `outDir`
+### `outdir`
 
 (required) The path of the output directory to build to, relative to the project root.
 
-### `mainEntry`
+### `entrypoints`
 
-(required) The file name of the main client-side entrypoint (.js, .jsx, .ts, .tsx). Must be located in the top level of the `srcDir`.
+(required) An array of strings representing the paths main entrypoint(s) of the build process. Each file must be of type `.js`, `.ts`, `.jsx`, or `.tsx`, and its path must be relative to the `root`.
 
-### `swEntry`
+### `swEntrypoint`
 
-(optional) The file name of the service worker entrypoint (.js, .ts). If specified, must be located in the top level of the `srcDir`.
+(optional) The file name of the service worker entrypoint (.js, .ts). If specified, its path must be relative to the `root`. This service worker entrypoint is deliberately separate from the main entrypoints to allow for a simpler build process - the only options passed into the service worker build are the `root`, `outdir`, and `minify`.
 
 ### `jsStringTemplate`
 
-(optional) The string template to be used in the `index.html` file to be replaced by the name of the JS build output file. Default is `{js}` if unspecified.
+(optional) The string template to be used in the `index.html` file to be replaced inline by the `<script>` tags for the JS build output files. Default is `<!-- {js} -->` if unspecified.
 
 ### `cssStringTemplate`
 
-(optional) The string template to be used in the `index.html` file to be replaced by the name of the CSS build output file. Default is `{css}` if unspecified.
+(optional) The string template to be used in the `index.html` file to be replaced inline by the `<link>` tags for the CSS build output files. Default is `<!-- {css} -->` if unspecified.
 
 ### `copyFolders`
 
-(optional) An array of folder names to copy recursively from the `srcDir` to the `outDir`.
+(optional) An array of folder names to copy recursively from the `root` to the `outdir`.
 
 ### `copyFiles`
 
-(optional) An array of file names to copy from the `srcDir` to the `outDir`. Each file must be in the top level of the `srcDir`.
-
-### `sourcemap`
-
-(optional) The Bun.build [sourcemap](https://bun.sh/docs/bundler#sourcemap) option. If unspecified, defaults to `"none"` in production mode and `"inline"` in development mode.
-
-### `minify`
-
-(optional) The Bun.build [minify](https://bun.sh/docs/bundler#minify) option. If unspecified, defaults to `true` in production mode and `false` in development mode.
-
-### `naming`
-
-(optional) The Bun.build [naming](https://bun.sh/docs/bundler#naming) option. If unspecified, defaults to:
-
-```typescript
-{
-	entry: `${isProd ? `${srcDir}/[dir]/` : ""}[name]~[hash].[ext]`,
-	asset: "[dir]/[name].[ext]"
-}
-```
+(optional) An array of file names to copy from the `root` to the `outdir`.
 
 ### `plugins`
 
 (optional) An array of Bun.build [plugins](https://bun.sh/docs/bundler#plugins) to use. By default, only the [bun-copy-plugin](https://github.com/jadujoel/bun-copy-plugin) will be used to copy the folders and files specified via the `copyFolders` and `copyFiles` options.
 
-### `isProd`
-
-(optional) A boolean used to explicitly set the build mode (production or development). If unspecified, the build process will use production mode if it detects a `BUN_ENV=production` or `NODE_ENV=production` command line argument or environment variable. Otherwise, it will use development mode.
-
 ### `suppressLog`
 
 (optional) A boolean used to suppress the log output of the build process. If unspecified, defaults to `false`.
 
+### `clearOutdir`
+
+(optional) A boolean used to clear the output directory at the start of the build. If unspecified, defaults to `true`.
+
 ## Additional Build Config Options
 
-The `BunBundle.build` function accepts any of the [native Bun.build config options](https://bun.sh/docs/bundler#api). The native options explicitly listed above are given opinionated default values. Any native option not listed above will simply be passed through to the `Bun.build` function with its normal default value.
+The `BunBundle.build` function accepts any of the [native Bun.build config options](https://bun.sh/docs/bundler#api). The select native options listed above are explicitly mentioned either because they are required, or because they are optional but are given special default values. Any native option that is not listed above will simply be passed through to the `Bun.build` function with its normal native default value.
 
 ## Build Output Fields
-
-### `isProd`
-
-A boolean indicating whether the build process was run in production or development mode.
 
 ### `results`
 

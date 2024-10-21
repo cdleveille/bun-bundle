@@ -1,115 +1,94 @@
 import copy from "bun-copy-plugin";
-import { minify as Minify } from "minify";
 import path from "path";
 import { rimrafSync } from "rimraf";
 
-import type { BuildConfig, BuildOutput } from "bun";
+import type { BuildArtifact, BuildConfig, BuildOutput } from "bun";
 
 export const BunBundle = {
 	build: async ({
-		srcDir,
-		outDir,
-		mainEntry,
-		swEntry,
-		jsStringTemplate = "{js}",
-		cssStringTemplate = "{css}",
+		root,
+		outdir,
+		entrypoints,
+		swEntrypoint,
+		jsStringTemplate = "<!-- {js} -->",
+		cssStringTemplate = "<!-- {css} -->",
 		copyFolders = [],
 		copyFiles = [],
-		sourcemap,
 		minify,
-		naming,
 		plugins = [],
-		isProd,
-		suppressLog,
+		suppressLog = false,
+		clearOutdir = true,
 		...rest
 	}: BunBundleBuildConfig) => {
 		try {
-			const start = Date.now();
+			const start = now();
 
-			const parseArg = (arg: string) => Bun.argv.find(a => a.startsWith(arg))?.split("=")[1];
+			if (clearOutdir) rimrafSync(path.resolve(outdir));
 
-			const BUN_ENV = parseArg("BUN_ENV") ?? parseArg("NODE_ENV");
-			const IS_PROD =
-				isProd ??
-				(BUN_ENV === "production" || Bun.env.BUN_ENV === "production" || Bun.env.NODE_ENV === "production");
-
-			// clear output folder
-			rimrafSync(outDir);
-
-			const buildCommon = {
-				root: srcDir,
-				outdir: outDir,
-				sourcemap: sourcemap ?? (IS_PROD ? "none" : "inline"),
-				minify: minify ?? IS_PROD
+			const sharedConfig = {
+				root: path.resolve(root),
+				outdir: path.resolve(outdir),
+				minify
 			} as Partial<BuildConfig>;
 
 			const buildMain = Bun.build({
 				...rest,
-				...buildCommon,
-				entrypoints: [path.join(srcDir, mainEntry)],
-				naming: naming ?? {
-					entry: `${IS_PROD ? `${srcDir}/[dir]/` : ""}[name]~[hash].[ext]`,
-					asset: "[dir]/[name].[ext]"
-				},
+				...sharedConfig,
+				entrypoints: [...entrypoints.map(entry => path.join(root, entry))],
 				plugins: [
-					...copyFolders.map(folder =>
-						copy(`${path.join(srcDir, folder)}/`, `${path.join(outDir, folder)}/`)
-					),
-					...copyFiles.map(file => copy(path.join(srcDir, file), path.join(outDir, file))),
-					...plugins
+					...plugins,
+					...copyFolders.map(folder => copy(`${path.join(root, folder)}/`, `${path.join(outdir, folder)}/`)),
+					...copyFiles.map(file => copy(path.join(root, file), path.join(outdir, file)))
 				]
 			});
 
-			const buildSw = swEntry
-				? Bun.build({
-						...buildCommon,
-						entrypoints: [path.join(srcDir, swEntry)]
-					})
-				: null;
-
 			// await build results
-			const results = await Promise.all([buildMain, ...(buildSw ? [buildSw] : [])]);
+			const results = swEntrypoint
+				? await Promise.all([
+						buildMain,
+						Bun.build({
+							...sharedConfig,
+							entrypoints: [path.join(root, swEntrypoint)]
+						})
+					])
+				: await Promise.all([buildMain]);
 
 			// check for errors
 			for (const result of results) {
 				if (!result.success) throw result.logs;
 			}
 
-			// find filenames of .js file and .css file in output
+			// assert that index.html exists in outDir
+			const indexHtmlPath = path.join(outdir, "index.html");
+			const indexHtmlFile = Bun.file(indexHtmlPath);
+			const indexHtmlContents = await indexHtmlFile.text().catch(() => {
+				throw "No index.html file found in outDir: " + path.resolve(outdir);
+			});
+
 			const { outputs } = results[0];
-			const jsFile = outputs.find(output => output.path.endsWith(".js"));
-			if (!jsFile) throw "No .js file found in build output";
-			const jsFileName = path.parse(jsFile.path).base;
-			const cssFile = outputs.find(output => output.path.endsWith(".css"));
-			if (!cssFile) throw "No .css file found in build output";
-			const cssFileName = path.parse(cssFile.path).base;
-			const indexHtmlPath = path.join(outDir, "index.html");
 
-			// inject .js and .css filenames into index.html
-			const indexHtmlContents = (await Bun.file(indexHtmlPath).text())
-				.replace(jsStringTemplate, jsFileName)
-				.replace(cssStringTemplate, cssFileName);
+			const jsFiles = outputs.filter(output => output.type.includes("text/javascript"));
+			if (jsFiles.length === 0) throw "No .js files found in build output";
+			const jsMarkup = jsFiles
+				.map(jsFile => `<script type="text/javascript" src="./${getFileName(jsFile)}" defer></script>`)
+				.join("\n");
 
-			await Promise.all([
-				Bun.write(indexHtmlPath, indexHtmlContents),
-				Bun.write(path.join(outDir, jsFileName), Bun.file(jsFile.path))
-			]);
+			const cssFiles = outputs.filter(output => output.type.includes("text/css"));
+			const cssMarkup = cssFiles
+				.map(cssFile => `<link rel="stylesheet" href="./${getFileName(cssFile)}" />`)
+				.join("\n");
 
-			if (IS_PROD) rimrafSync(path.join(outDir, "src"));
+			// inject markup for .js and .css files into index.html
+			await Bun.write(
+				indexHtmlPath,
+				indexHtmlContents.replace(jsStringTemplate, jsMarkup).replace(cssStringTemplate, cssMarkup)
+			);
 
-			if (minify ?? IS_PROD) {
-				// minify html and css files in production
-				const [minifiedHtml, minifiedCss] = await Promise.all([Minify(indexHtmlPath), Minify(cssFile.path)]);
-				await Promise.all([Bun.write(indexHtmlPath, minifiedHtml), Bun.write(cssFile.path, minifiedCss)]);
-			}
+			const buildTime = parseFloat((now() - start).toFixed(2));
 
-			const buildTime = Date.now() - start;
-
-			if (!suppressLog)
-				console.log(`Build completed in ${IS_PROD ? "production" : "development"} mode (${buildTime}ms)`);
+			if (!suppressLog) console.log(`Build completed in ${buildTime}ms`);
 
 			const buildOutput: BunBundleBuildOutput = {
-				isProd: IS_PROD,
 				results,
 				buildTime
 			};
@@ -122,20 +101,23 @@ export const BunBundle = {
 };
 
 export type BunBundleBuildConfig = {
-	srcDir: string;
-	outDir: string;
-	mainEntry: string;
-	swEntry?: string;
+	root: string;
+	outdir: string;
+	entrypoints: string[];
+	swEntrypoint?: string;
 	jsStringTemplate?: string;
 	cssStringTemplate?: string;
 	copyFolders?: string[];
 	copyFiles?: string[];
-	isProd?: boolean;
 	suppressLog?: boolean;
+	clearOutdir?: boolean;
 } & Partial<BuildConfig>;
 
 export type BunBundleBuildOutput = {
-	isProd: boolean;
 	results: BuildOutput[];
 	buildTime: number;
 };
+
+const now = () => performance?.now?.() ?? Date.now();
+
+const getFileName = (file: BuildArtifact) => path.parse(file.path).base;
