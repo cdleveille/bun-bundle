@@ -62,17 +62,17 @@ console.log("Build results:\n", results);
 
 ### `entrypoints`
 
-(required) An array of strings representing the paths main entrypoint(s) of the build process. Each file must be of type `.html`, `.js`, `.ts`, `.jsx`, or `.tsx`, and its path must be relative to the `root`.
+(required) An array of strings representing the main entrypoint file(s) of the build process. Each file must be of type `.html`, `.js`, `.ts`, `.jsx`, or `.tsx`, and its path must be relative to the `root`.
 
 If an HTML file is specified, the build process will also build any scripts it references (including `.jsx`, `.ts`, and `.tsx` files), and will rename them inline to match their respective build output filenames. Any CSS files it references will also be copied to the `outdir`.
 
-For example, a script tag with a `src` like this:
+For example, a script tag like this...
 
 ```html
 <script type="text/javascript" src="./main.tsx" defer></script>
 ```
 
-...will be automatically renamed in the `outdir` to match the build output filename:
+...will have the value of its `src` attribute automatically updated in the `outdir` to match the build output filename:
 
 ```html
 <script type="text/javascript" src="./main~4rvgxggr.js" defer></script>
@@ -80,7 +80,7 @@ For example, a script tag with a `src` like this:
 
 ### `swEntrypoint`
 
-(optional) The file name of the service worker entrypoint (.js, .ts). If specified, its path must be relative to the `root`. This service worker entrypoint is deliberately separate from the main entrypoints to allow for a simpler build process - the only options passed into the service worker build are the `root`, `outdir`, and `minify`.
+(optional) The service worker entrypoint file (`.js` or `.ts`). If specified, its path must be relative to the `root`.
 
 ### `copyFolders`
 
