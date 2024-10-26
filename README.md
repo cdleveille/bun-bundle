@@ -14,16 +14,18 @@ To use, install the `bun-bundle` package, then import `BunBundle` and call its `
 bun add -D bun-bundle
 ```
 
+To see an example of bun-bundle in action, check out the [fullstack-bun](https://github.com/cdleveille/fullstack-bun) project template.
+
 ## New in version 4.0.0
 
-You can now specify an HTML file as an entrypoint. The build process will also build any scripts it references, and will rename them inline to match their respective build output filenames. Any CSS files it references will also be copied to the output directory.
+You can now specify an HTML file as an entrypoint. The build process will also build any scripts it references (including `.jsx`, `.ts`, and `.tsx` files), and will rename them inline to match their respective build output filenames. Any CSS files it references will also be copied to the output directory.
 
 ## Example Usage
 
 ```typescript
 import { BunBundle, BunBundleBuildConfig, BunBundleBuildOutput } from "bun-bundle";
 
-const IS_PROD = Bun.env.BUN_ENV === "true";
+const IS_PROD = process.env.NODE_ENV === "production";
 
 const buildConfig: BunBundleBuildConfig = {
 	root: "./src/client",
@@ -52,17 +54,29 @@ console.log("Build results:\n", results);
 
 ### `root`
 
-(required) The path of the source directory to build from, relative to the project root.
+(required) The path of the source directory to build from, relative to the project root. This is typically where your client-side source code lives.
 
 ### `outdir`
 
-(required) The path of the output directory to build to, relative to the project root.
+(required) The path of the output directory to build to, relative to the project root. This is typically a public directory that will be served by your web server.
 
 ### `entrypoints`
 
 (required) An array of strings representing the paths main entrypoint(s) of the build process. Each file must be of type `.html`, `.js`, `.ts`, `.jsx`, or `.tsx`, and its path must be relative to the `root`.
 
-If an HTML file is specified, the build process will also build any scripts it references, and will rename them inline to match their respective build output filenames. Any CSS files it references will also be copied to the `outdir`.
+If an HTML file is specified, the build process will also build any scripts it references (including `.jsx`, `.ts`, and `.tsx` files), and will rename them inline to match their respective build output filenames. Any CSS files it references will also be copied to the `outdir`.
+
+For example, a script tag with a `src` like this:
+
+```html
+<script type="text/javascript" src="./main.tsx" defer></script>
+```
+
+...will be automatically renamed in the `outdir` to match the build output filename:
+
+```html
+<script type="text/javascript" src="./main~4rvgxggr.js" defer></script>
+```
 
 ### `swEntrypoint`
 
