@@ -6,7 +6,6 @@ Designed to bundle client-side code for the browser. Capable of:
 
 -   Building multiple entrypoints (including a service worker)
 -   Copying folders and files from the source directory to the output directory
--   Dynamically injecting `<script>` and `<link>` tags into an `index.html` file in the output folder for each of the .js and .css files in the build output
 -   All the other native features of [Bun.build](https://bun.sh/docs/bundler)
 
 To use, install the `bun-bundle` package, then import `BunBundle` and call its `build` function with the desired config options.
@@ -14,6 +13,10 @@ To use, install the `bun-bundle` package, then import `BunBundle` and call its `
 ```
 bun add -D bun-bundle
 ```
+
+## New in version 4.0.0
+
+You can now specify an HTML file as an entrypoint. The build process will also build any scripts it references, and will rename them inline to match their respective build output filenames. Any CSS files it references will also be copied to the output directory.
 
 ## Example Usage
 
@@ -25,12 +28,10 @@ const IS_PROD = Bun.env.BUN_ENV === "true";
 const buildConfig: BunBundleBuildConfig = {
 	root: "./src/client",
 	outdir: "./public",
-	entrypoints: ["main.tsx"],
+	entrypoints: ["index.html"],
 	swEntrypoint: "sw.ts",
-	jsStringTemplate: "<!-- {js} -->",
-	cssStringTemplate: "<!-- {css} -->",
 	copyFolders: ["assets"],
-	copyFiles: ["browserconfig.xml", "favicon.ico", "index.html", "manifest.json"],
+	copyFiles: ["browserconfig.xml", "favicon.ico", "manifest.json"],
 	define: { "Bun.env.IS_PROD": `"${IS_PROD}"` },
 	sourcemap: IS_PROD ? "none" : "linked",
 	naming: {
@@ -59,19 +60,13 @@ console.log("Build results:\n", results);
 
 ### `entrypoints`
 
-(required) An array of strings representing the paths main entrypoint(s) of the build process. Each file must be of type `.js`, `.ts`, `.jsx`, or `.tsx`, and its path must be relative to the `root`.
+(required) An array of strings representing the paths main entrypoint(s) of the build process. Each file must be of type `.html`, `.js`, `.ts`, `.jsx`, or `.tsx`, and its path must be relative to the `root`.
+
+If an HTML file is specified, the build process will also build any scripts it references, and will rename them inline to match their respective build output filenames. Any CSS files it references will also be copied to the `outdir`.
 
 ### `swEntrypoint`
 
 (optional) The file name of the service worker entrypoint (.js, .ts). If specified, its path must be relative to the `root`. This service worker entrypoint is deliberately separate from the main entrypoints to allow for a simpler build process - the only options passed into the service worker build are the `root`, `outdir`, and `minify`.
-
-### `jsStringTemplate`
-
-(optional) The string template to be used in the `index.html` file to be replaced inline by the `<script>` tags for the JS build output files. Default is `<!-- {js} -->` if unspecified.
-
-### `cssStringTemplate`
-
-(optional) The string template to be used in the `index.html` file to be replaced inline by the `<link>` tags for the CSS build output files. Default is `<!-- {css} -->` if unspecified.
 
 ### `copyFolders`
 
